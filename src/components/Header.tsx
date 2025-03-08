@@ -1,124 +1,166 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
+import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Search, BookmarkIcon, UserPlus } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import NotificationBell from "@/components/NotificationBell";
 
 const Header = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Search', path: '/search', icon: Search },
-    { name: 'Profiles', path: '/profiles' },
-    { name: 'Create Profile', path: '/create-profile', icon: UserPlus }
-  ];
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out ${
-        isScrolled 
-          ? 'py-2 bg-blur border-b' 
-          : 'py-4 bg-transparent'
-      }`}
-    >
+    <header className="sticky top-0 z-40 border-b bg-blur">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="flex items-center justify-between">
-          <Link 
-            to="/" 
-            className="flex items-center space-x-2"
-          >
-            <span className="font-bold text-xl md:text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              TalentHub
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path} 
-                to={link.path}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-secondary ${
-                  location.pathname === link.path 
-                    ? 'text-primary' 
-                    : 'text-foreground/80 hover:text-foreground'
-                }`}
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <NavLink to="/" className="flex items-center">
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                TalentHub
+              </span>
+            </NavLink>
+            <nav className="hidden md:flex items-center gap-6 ml-10">
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-primary ${
+                    isActive ? "text-primary" : "text-foreground/80"
+                  }`
+                }
               >
-                <div className="flex items-center space-x-1">
-                  {link.icon && <link.icon className="w-4 h-4" />}
-                  <span>{link.name}</span>
-                </div>
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="border-primary/20 transition-all hover:border-primary/80">
-              Sign In
-            </Button>
-            <Button size="sm" className="bg-primary hover:bg-primary/90 transition-all">
-              Sign Up
-            </Button>
+                Home
+              </NavLink>
+              <NavLink
+                to="/search"
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-primary ${
+                    isActive ? "text-primary" : "text-foreground/80"
+                  }`
+                }
+              >
+                Search
+              </NavLink>
+              <NavLink
+                to="/profiles"
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-primary ${
+                    isActive ? "text-primary" : "text-foreground/80"
+                  }`
+                }
+              >
+                Profiles
+              </NavLink>
+              <NavLink
+                to="/analytics"
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-primary ${
+                    isActive ? "text-primary" : "text-foreground/80"
+                  }`
+                }
+              >
+                Analytics
+              </NavLink>
+            </nav>
           </div>
-
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden" 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6 text-foreground" />
-            ) : (
-              <Menu className="w-6 h-6 text-foreground" />
-            )}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2">
+              <NotificationBell />
+              <ThemeToggle />
+              <NavLink to="/sign-in">
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </NavLink>
+              <NavLink to="/sign-up">
+                <Button size="sm">Sign Up</Button>
+              </NavLink>
+            </div>
+            <button
+              className="flex md:hidden"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-background border-b border-border animate-fade-in">
-          <div className="container mx-auto px-4 py-4 space-y-3">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path} 
-                to={link.path}
-                className={`block px-4 py-3 rounded-lg font-medium ${
-                  location.pathname === link.path 
-                    ? 'bg-secondary text-primary' 
-                    : 'text-foreground'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  {link.icon && <link.icon className="w-5 h-5" />}
-                  <span>{link.name}</span>
-                </div>
-              </Link>
-            ))}
-            <div className="pt-2 space-y-3">
-              <Button variant="outline" className="w-full border-primary/20 transition-all hover:border-primary/80">
-                Sign In
-              </Button>
-              <Button className="w-full bg-primary hover:bg-primary/90 transition-all">
-                Sign Up
-              </Button>
+        <div className="md:hidden border-t">
+          <div className="container px-4 py-4 flex flex-col gap-4">
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `py-2 text-base font-medium transition-colors hover:text-primary ${
+                  isActive ? "text-primary" : "text-foreground/80"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Home
+            </NavLink>
+            <NavLink
+              to="/search"
+              className={({ isActive }) =>
+                `py-2 text-base font-medium transition-colors hover:text-primary ${
+                  isActive ? "text-primary" : "text-foreground/80"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Search
+            </NavLink>
+            <NavLink
+              to="/profiles"
+              className={({ isActive }) =>
+                `py-2 text-base font-medium transition-colors hover:text-primary ${
+                  isActive ? "text-primary" : "text-foreground/80"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Profiles
+            </NavLink>
+            <NavLink
+              to="/analytics"
+              className={({ isActive }) =>
+                `py-2 text-base font-medium transition-colors hover:text-primary ${
+                  isActive ? "text-primary" : "text-foreground/80"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Analytics
+            </NavLink>
+            <NavLink
+              to="/notifications"
+              className={({ isActive }) =>
+                `py-2 text-base font-medium transition-colors hover:text-primary ${
+                  isActive ? "text-primary" : "text-foreground/80"
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Notifications
+            </NavLink>
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              <NavLink to="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="outline" className="w-full">
+                  Sign In
+                </Button>
+              </NavLink>
+              <NavLink to="/sign-up" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full">Sign Up</Button>
+              </NavLink>
             </div>
           </div>
         </div>
