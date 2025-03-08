@@ -1,8 +1,12 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, PieChart as PieChartIcon, Users, Search, LineChart, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { BarChart3, PieChart as PieChartIcon, Users, Search, LineChart as LineChartIcon, TrendingUp, Download, Calendar } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // Sample data for analytics
 const searchData = [
@@ -32,18 +36,60 @@ const weeklyActivity = [
   { day: 'Sun', searches: 8, profileViews: 13 },
 ];
 
+const monthlyActivity = [
+  { month: 'Jan', searches: 180, profileViews: 220, hires: 5 },
+  { month: 'Feb', searches: 200, profileViews: 240, hires: 8 },
+  { month: 'Mar', searches: 250, profileViews: 280, hires: 10 },
+  { month: 'Apr', searches: 280, profileViews: 320, hires: 12 },
+  { month: 'May', searches: 310, profileViews: 350, hires: 15 },
+  { month: 'Jun', searches: 350, profileViews: 400, hires: 18 },
+];
+
 const COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
 const RecruiterAnalytics = () => {
+  const [timeRange, setTimeRange] = useState("weekly");
+  const { toast } = useToast();
+  
   const totalSearches = weeklyActivity.reduce((sum, day) => sum + day.searches, 0);
   const totalProfileViews = weeklyActivity.reduce((sum, day) => sum + day.profileViews, 0);
   
+  const handleExportData = () => {
+    toast({
+      title: "Analytics exported",
+      description: "Your analytics data has been exported successfully.",
+    });
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
-      <h1 className="text-2xl md:text-3xl font-bold mb-8 flex items-center gap-2">
-        <LineChart className="h-6 w-6 text-primary" />
-        Recruiter Analytics
-      </h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+          <LineChartIcon className="h-6 w-6 text-primary" />
+          Recruiter Analytics
+        </h1>
+        
+        <div className="flex items-center gap-4 mt-4 md:mt-0">
+          <Select
+            defaultValue="weekly"
+            onValueChange={(value) => setTimeRange(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="weekly">Last 7 days</SelectItem>
+              <SelectItem value="monthly">Last 30 days</SelectItem>
+              <SelectItem value="quarterly">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button variant="outline" size="sm" onClick={handleExportData}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Data
+          </Button>
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
@@ -89,7 +135,7 @@ const RecruiterAnalytics = () => {
       </div>
       
       <Tabs defaultValue="weekly" className="mb-8">
-        <TabsList>
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="weekly">Weekly Activity</TabsTrigger>
           <TabsTrigger value="searches">Popular Searches</TabsTrigger>
           <TabsTrigger value="locations">Candidate Locations</TabsTrigger>
@@ -190,6 +236,35 @@ const RecruiterAnalytics = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Monthly Performance Trends
+          </CardTitle>
+          <CardDescription>View your recruitment metrics over time</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={monthlyActivity}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="searches" name="Searches" stroke="#3b82f6" activeDot={{ r: 8 }} />
+                <Line type="monotone" dataKey="profileViews" name="Profile Views" stroke="#8b5cf6" />
+                <Line type="monotone" dataKey="hires" name="Hires" stroke="#10b981" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
