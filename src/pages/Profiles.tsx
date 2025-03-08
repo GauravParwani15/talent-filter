@@ -1,236 +1,197 @@
 
-import { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import ProfileCard from '@/components/ProfileCard';
-import { mockProfiles, locations, availabilityOptions } from '@/data/mockData';
-import { TalentProfile, SearchFilters } from '@/types';
-import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Bookmark, 
+  Filter, 
+  MapPin, 
+  Search, 
+  User,
+  Briefcase,
+  Star
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Mock profiles data
+const mockProfiles = [
+  {
+    id: "1",
+    name: "Jordan Smith",
+    jobTitle: "Senior Software Engineer",
+    location: "San Francisco, CA",
+    skills: ["React", "TypeScript", "Node.js"],
+    availability: "Available in 2 weeks",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Jordan Smith"
+  },
+  {
+    id: "2",
+    name: "Alex Johnson",
+    jobTitle: "UX/UI Designer",
+    location: "New York, NY",
+    skills: ["Figma", "Adobe XD", "UI Design"],
+    availability: "Immediately Available",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Alex Johnson"
+  },
+  {
+    id: "3",
+    name: "Taylor Wilson",
+    jobTitle: "DevOps Engineer",
+    location: "Austin, TX",
+    skills: ["AWS", "Docker", "Kubernetes"],
+    availability: "Available in 1 month",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Taylor Wilson"
+  },
+  {
+    id: "4",
+    name: "Morgan Lee",
+    jobTitle: "Full Stack Developer",
+    location: "Seattle, WA",
+    skills: ["JavaScript", "Python", "React", "Django"],
+    availability: "Available in 2 weeks",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Morgan Lee"
+  },
+  {
+    id: "5",
+    name: "Casey Brown",
+    jobTitle: "Mobile Developer",
+    location: "Los Angeles, CA",
+    skills: ["React Native", "Swift", "Kotlin"],
+    availability: "Immediately Available",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Casey Brown"
+  },
+  {
+    id: "6",
+    name: "Riley Garcia",
+    jobTitle: "Data Scientist",
+    location: "Chicago, IL",
+    skills: ["Python", "R", "Machine Learning", "SQL"],
+    availability: "Available in 3 weeks",
+    imageUrl: "https://api.dicebear.com/7.x/personas/svg?seed=Riley Garcia"
+  }
+];
 
 const Profiles = () => {
-  const [profiles, setProfiles] = useState<TalentProfile[]>(mockProfiles);
-  const [filteredProfiles, setFilteredProfiles] = useState<TalentProfile[]>(mockProfiles);
+  const [searchQuery, setSearchQuery] = useState("");
   const [bookmarkedProfiles, setBookmarkedProfiles] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<SearchFilters>({});
-  const [experienceRange, setExperienceRange] = useState([0, 10]);
   
-  // Handle bookmarking a profile
-  const handleBookmark = (profileId: string) => {
-    setBookmarkedProfiles(prevBookmarks => {
-      if (prevBookmarks.includes(profileId)) {
-        return prevBookmarks.filter(id => id !== profileId);
-      } else {
-        return [...prevBookmarks, profileId];
-      }
-    });
+  const toggleBookmark = (profileId: string) => {
+    setBookmarkedProfiles(prev => 
+      prev.includes(profileId)
+        ? prev.filter(id => id !== profileId)
+        : [...prev, profileId]
+    );
   };
   
-  // Apply filters to profiles
-  useEffect(() => {
-    let result = [...profiles];
-    
-    if (filters.location) {
-      result = result.filter(profile => profile.location === filters.location);
-    }
-    
-    if (filters.availability) {
-      result = result.filter(profile => profile.availability === filters.availability);
-    }
-    
-    if (filters.experienceMin !== undefined || filters.experienceMax !== undefined) {
-      result = result.filter(profile => {
-        const experience = profile.totalYearsOfExperience;
-        const minFilter = filters.experienceMin !== undefined ? experience >= filters.experienceMin : true;
-        const maxFilter = filters.experienceMax !== undefined ? experience <= filters.experienceMax : true;
-        return minFilter && maxFilter;
-      });
-    }
-    
-    setFilteredProfiles(result);
-  }, [profiles, filters]);
-  
-  // Handle experience range slider change
-  const handleExperienceRangeChange = (values: number[]) => {
-    setExperienceRange(values);
-    setFilters(prev => ({
-      ...prev,
-      experienceMin: values[0],
-      experienceMax: values[1]
-    }));
-  };
-  
-  // Clear all filters
-  const clearFilters = () => {
-    setFilters({});
-    setExperienceRange([0, 10]);
-    setFilteredProfiles(profiles);
-  };
+  const filteredProfiles = mockProfiles.filter(profile => 
+    profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    profile.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    profile.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
   
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      
-      <main className="flex-grow pt-24 pb-16">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Discover Talent</h1>
-            <p className="text-muted-foreground">Browse through our selection of skilled professionals</p>
-          </div>
-          
-          {/* Filters section */}
-          <div className="mb-8 bg-card border rounded-xl p-4 md:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4" />
-                <span>Filters</span>
-                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-              
-              <div className="flex flex-wrap gap-2 items-center">
-                {Object.keys(filters).length > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    className="h-8 text-xs text-muted-foreground"
-                    onClick={clearFilters}
-                  >
-                    Clear all
-                    <X className="h-3 w-3 ml-1" />
-                  </Button>
-                )}
-                
-                {filters.location && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Location: {filters.location}
-                    <button 
-                      onClick={() => setFilters(prev => ({ ...prev, location: undefined }))}
-                      className="hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                
-                {filters.availability && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Availability: {filters.availability.replace('-', ' ')}
-                    <button 
-                      onClick={() => setFilters(prev => ({ ...prev, availability: undefined }))}
-                      className="hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                
-                {(filters.experienceMin !== undefined || filters.experienceMax !== undefined) && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Experience: {filters.experienceMin} - {filters.experienceMax} years
-                    <button 
-                      onClick={() => {
-                        setFilters(prev => ({ 
-                          ...prev, 
-                          experienceMin: undefined, 
-                          experienceMax: undefined 
-                        }));
-                        setExperienceRange([0, 10]);
-                      }}
-                      className="hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
-                
-                <div className="text-sm text-muted-foreground">
-                  Showing {filteredProfiles.length} of {profiles.length} profiles
-                </div>
-              </div>
-            </div>
-            
-            {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t animate-fade-in">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Location</label>
-                  <Select 
-                    value={filters.location} 
-                    onValueChange={value => setFilters(prev => ({ ...prev, location: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map(location => (
-                        <SelectItem key={location} value={location}>
-                          {location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Availability</label>
-                  <Select 
-                    value={filters.availability} 
-                    onValueChange={value => setFilters(prev => ({ ...prev, availability: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select availability" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availabilityOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Years of Experience: {experienceRange[0]} - {experienceRange[1]}</label>
-                  <Slider
-                    min={0}
-                    max={10}
-                    step={1}
-                    value={experienceRange}
-                    onValueChange={handleExperienceRangeChange}
-                    className="mt-6"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Profiles grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProfiles.map(profile => (
-              <ProfileCard 
-                key={profile.id} 
-                profile={profile} 
-                isBookmarked={bookmarkedProfiles.includes(profile.id)}
-                onBookmark={handleBookmark}
-              />
-            ))}
-          </div>
-          
-          {filteredProfiles.length === 0 && (
-            <div className="text-center py-16">
-              <h3 className="text-xl font-medium mb-2">No matching profiles found</h3>
-              <p className="text-muted-foreground mb-4">Try adjusting your filters to find more results</p>
-              <Button onClick={clearFilters}>Clear all filters</Button>
-            </div>
-          )}
+    <div className="container mx-auto px-4 md:px-6 py-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Talent Profiles</h1>
+          <p className="text-muted-foreground">
+            Discover and connect with exceptional talent
+          </p>
         </div>
-      </main>
+        
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search profiles..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="icon">
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProfiles.map((profile) => (
+          <Card key={profile.id} className="overflow-hidden">
+            <CardHeader className="p-0">
+              <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20" />
+            </CardHeader>
+            <CardContent className="pt-0 relative">
+              <div className="flex justify-between">
+                <Avatar className="h-16 w-16 border-4 border-background mt-[-32px]">
+                  <AvatarImage src={profile.imageUrl} alt={profile.name} />
+                  <AvatarFallback>
+                    <User className="h-8 w-8" />
+                  </AvatarFallback>
+                </Avatar>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="mt-2"
+                  onClick={() => toggleBookmark(profile.id)}
+                >
+                  <Bookmark 
+                    className={cn(
+                      "h-5 w-5",
+                      bookmarkedProfiles.includes(profile.id) ? "fill-primary text-primary" : "text-muted-foreground"
+                    )}
+                  />
+                </Button>
+              </div>
+              
+              <div className="mt-2">
+                <h3 className="text-xl font-semibold">{profile.name}</h3>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Briefcase className="h-3 w-3" />
+                  <span>{profile.jobTitle}</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
+                  <MapPin className="h-3 w-3" />
+                  <span>{profile.location}</span>
+                </div>
+                
+                <div className="flex items-center gap-1 text-sm mb-3">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Star className="h-3 w-3" />
+                    {profile.availability}
+                  </Badge>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {profile.skills.map((skill, index) => (
+                    <Badge key={index} variant="outline">{skill}</Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="secondary" asChild>
+                <Link to={`/profiles/${profile.id}`}>View Profile</Link>
+              </Button>
+              <Button variant="outline">Contact</Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      
+      {filteredProfiles.length === 0 && (
+        <div className="text-center py-12">
+          <User className="h-12 w-12 mx-auto text-muted-foreground" />
+          <h2 className="text-xl font-semibold mt-4">No profiles found</h2>
+          <p className="text-muted-foreground mt-2">
+            Try adjusting your search or filters to find more candidates.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

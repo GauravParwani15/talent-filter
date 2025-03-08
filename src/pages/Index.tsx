@@ -1,4 +1,3 @@
-
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Header from "@/components/Header";
@@ -75,7 +74,7 @@ const Index = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
-                  <Link to="/search">
+                  <Link to="/profiles">
                     <span>Find Talent</span>
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -108,8 +107,8 @@ const Index = () => {
                   <h4 className="font-medium mb-3">Platform</h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
-                    <li><Link to="/search" className="hover:text-primary transition-colors">Search</Link></li>
                     <li><Link to="/profiles" className="hover:text-primary transition-colors">Profiles</Link></li>
+                    <li><Link to="/analytics" className="hover:text-primary transition-colors">Analytics</Link></li>
                   </ul>
                 </div>
                 
@@ -118,7 +117,7 @@ const Index = () => {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li><Link to="/sign-in" className="hover:text-primary transition-colors">Sign In</Link></li>
                     <li><Link to="/sign-up" className="hover:text-primary transition-colors">Sign Up</Link></li>
-                    <li><Link to="/create-profile" className="hover:text-primary transition-colors">Create Profile</Link></li>
+                    <li><Link to="/profile" className="hover:text-primary transition-colors">My Profile</Link></li>
                   </ul>
                 </div>
                 
