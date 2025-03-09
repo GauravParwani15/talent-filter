@@ -1,15 +1,12 @@
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
-import Header from "@/components/Header";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
+    <div>
       <main>
         <Hero />
         <Features />

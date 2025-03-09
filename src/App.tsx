@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
 import Index from "./pages/Index";
 import Notifications from "./pages/Notifications";
 import RecruiterAnalytics from "./pages/RecruiterAnalytics";
@@ -21,14 +22,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/analytics" element={<RecruiterAnalytics />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/profiles" element={<Profiles />} />
-          <Route path="/profiles/:profileId" element={<ProfileDetail />} />
+          <Route path="/" element={<MainLayout><Index /></MainLayout>} />
+          <Route path="/notifications" element={<MainLayout><Notifications /></MainLayout>} />
+          <Route path="/analytics" element={<MainLayout><RecruiterAnalytics /></MainLayout>} />
+          <Route path="/profile" element={<MainLayout><UserProfile /></MainLayout>} />
+          <Route path="/profiles" element={<MainLayout><Profiles /></MainLayout>} />
+          <Route path="/profiles/:profileId" element={<MainLayout><ProfileDetail /></MainLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
