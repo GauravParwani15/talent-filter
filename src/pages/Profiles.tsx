@@ -26,6 +26,7 @@ type Profile = {
   location: string;
   skills: string;
   created_at: string;
+  source?: 'regular' | 'analytics';
 };
 
 const Profiles = () => {
@@ -57,16 +58,27 @@ const Profiles = () => {
           }
         }
         
-        // Fetch all profiles
-        const { data, error } = await supabase
+        // Fetch regular profiles
+        const { data: regularProfiles, error: regularError } = await supabase
           .from('profiles')
           .select('id, title, location, skills, created_at');
           
-        if (error) throw error;
+        if (regularError) throw regularError;
         
-        if (data) {
-          setProfiles(data);
-        }
+        // Fetch analytics profiles
+        const { data: analyticsProfiles, error: analyticsError } = await supabase
+          .from('analytics_profiles')
+          .select('id, title, location, skills, created_at');
+          
+        if (analyticsError) throw analyticsError;
+        
+        // Combine and mark the source of each profile
+        const combinedProfiles = [
+          ...(regularProfiles || []).map(profile => ({ ...profile, source: 'regular' as const })),
+          ...(analyticsProfiles || []).map(profile => ({ ...profile, source: 'analytics' as const }))
+        ];
+        
+        setProfiles(combinedProfiles);
       } catch (error) {
         console.error('Error fetching profiles:', error);
         toast({
@@ -80,6 +92,52 @@ const Profiles = () => {
     };
     
     fetchProfiles();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:analytics_profiles')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'analytics_profiles' 
+        }, 
+        (payload) => {
+          console.log('Realtime update:', payload);
+          // Handle different realtime events
+          if (payload.eventType === 'INSERT') {
+            const newProfile = payload.new as Profile;
+            setProfiles(currentProfiles => [
+              ...currentProfiles, 
+              { ...newProfile, source: 'analytics' }
+            ]);
+            toast({
+              title: "New profile added",
+              description: "A new talent profile has just been added.",
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedProfile = payload.new as Profile;
+            setProfiles(currentProfiles => 
+              currentProfiles.map(profile => 
+                profile.id === updatedProfile.id 
+                  ? { ...updatedProfile, source: 'analytics' } 
+                  : profile
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedProfile = payload.old as Profile;
+            setProfiles(currentProfiles => 
+              currentProfiles.filter(profile => profile.id !== deletedProfile.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+    
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
   
   const toggleBookmark = async (profileId: string) => {
@@ -160,7 +218,12 @@ const Profiles = () => {
           {filteredProfiles.map((profile) => (
             <Card key={profile.id} className="overflow-hidden">
               <CardHeader className="p-0">
-                <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20" />
+                <div className={cn(
+                  "h-24 bg-gradient-to-r",
+                  profile.source === 'analytics' 
+                    ? "from-green-100 to-green-300 dark:from-green-950 dark:to-green-900" 
+                    : "from-primary/20 to-accent/20"
+                )} />
               </CardHeader>
               <CardContent className="pt-0 relative">
                 <div className="flex justify-between">
@@ -170,19 +233,25 @@ const Profiles = () => {
                       <User className="h-8 w-8" />
                     </AvatarFallback>
                   </Avatar>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="mt-2"
-                    onClick={() => toggleBookmark(profile.id)}
-                  >
-                    <Bookmark 
-                      className={cn(
-                        "h-5 w-5",
-                        bookmarkedProfiles.includes(profile.id) ? "fill-primary text-primary" : "text-muted-foreground"
-                      )}
-                    />
-                  </Button>
+                  <div className="flex items-center gap-2 mt-2">
+                    {profile.source === 'analytics' && (
+                      <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                        Live Data
+                      </Badge>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => toggleBookmark(profile.id)}
+                    >
+                      <Bookmark 
+                        className={cn(
+                          "h-5 w-5",
+                          bookmarkedProfiles.includes(profile.id) ? "fill-primary text-primary" : "text-muted-foreground"
+                        )}
+                      />
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="mt-2">
