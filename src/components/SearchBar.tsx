@@ -45,7 +45,7 @@ const SearchBar = ({ onSearch, initialQuery = "", isLoading = false }: SearchBar
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Try: "${randomPlaceholder}"`}
-            className="block w-full py-3 pl-12 pr-20 text-base rounded-xl border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="block w-full py-3 pl-12 pr-20 text-base rounded-xl border border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             disabled={isLoading}
           />
           
@@ -86,7 +86,7 @@ const SearchBar = ({ onSearch, initialQuery = "", isLoading = false }: SearchBar
               onSearch(term);
             }}
             disabled={isLoading}
-            className="text-sm px-3 py-1 rounded-full bg-secondary text-foreground hover:bg-primary/10 transition-colors"
+            className="text-sm px-3 py-1 rounded-full bg-secondary text-secondary-foreground hover:bg-primary/10 transition-colors cursor-pointer"
           >
             {term}
           </button>

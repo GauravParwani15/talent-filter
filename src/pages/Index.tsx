@@ -1,14 +1,41 @@
+
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
+import SearchBar from "@/components/SearchBar";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    navigate(`/profiles?search=${encodeURIComponent(query)}`);
+  };
+  
   return (
     <div>
       <main>
         <Hero />
+        
+        {/* Search Section */}
+        <section className="py-12 px-4">
+          <div className="container mx-auto">
+            <div className="max-w-3xl mx-auto text-center mb-8">
+              <h2 className="text-3xl font-bold mb-4">Find the Perfect Match</h2>
+              <p className="text-muted-foreground">
+                Search for talent using natural language - describe exactly what you're looking for
+              </p>
+            </div>
+            
+            <SearchBar onSearch={handleSearch} />
+          </div>
+        </section>
+        
         <Features />
         
         {/* How It Works Section */}
