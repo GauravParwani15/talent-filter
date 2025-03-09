@@ -15,6 +15,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import CreateProfile from "./pages/CreateProfile";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -25,15 +26,60 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<MainLayout><Index /></MainLayout>} />
-          <Route path="/notifications" element={<MainLayout><Notifications /></MainLayout>} />
-          <Route path="/analytics" element={<MainLayout><RecruiterAnalytics /></MainLayout>} />
-          <Route path="/profile" element={<MainLayout><UserProfile /></MainLayout>} />
-          <Route path="/profiles" element={<MainLayout><Profiles /></MainLayout>} />
-          <Route path="/profiles/:profileId" element={<MainLayout><ProfileDetail /></MainLayout>} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <MainLayout><Index /></MainLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <MainLayout><Notifications /></MainLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <MainLayout><RecruiterAnalytics /></MainLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <MainLayout><UserProfile /></MainLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profiles" 
+            element={
+              <MainLayout><Profiles /></MainLayout>
+            } 
+          />
+          <Route 
+            path="/profiles/:profileId" 
+            element={
+              <MainLayout><ProfileDetail /></MainLayout>
+            } 
+          />
           <Route path="/sign-in" element={<MainLayout><SignIn /></MainLayout>} />
           <Route path="/sign-up" element={<MainLayout><SignUp /></MainLayout>} />
-          <Route path="/create-profile" element={<MainLayout><CreateProfile /></MainLayout>} />
+          <Route 
+            path="/create-profile" 
+            element={
+              <ProtectedRoute requireAuth={true}>
+                <MainLayout><CreateProfile /></MainLayout>
+              </ProtectedRoute>
+            } 
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>

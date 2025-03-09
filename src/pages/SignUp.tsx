@@ -65,7 +65,7 @@ const SignUp = () => {
         description: "You've successfully created an account. Please check your email for verification.",
       });
       
-      navigate("/create-profile");
+      navigate("/profiles");
     } catch (error: any) {
       toast({
         variant: "destructive",

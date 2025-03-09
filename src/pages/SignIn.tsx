@@ -51,7 +51,7 @@ const SignIn = () => {
         description: "You've successfully signed in.",
       });
       
-      navigate("/profile");
+      navigate("/profiles");
     } catch (error: any) {
       toast({
         variant: "destructive",
