@@ -1,13 +1,51 @@
 
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Menu, X, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: error.message || "An error occurred while signing out.",
+      });
+    }
+  };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -70,14 +108,35 @@ const Header = () => {
             <div className="hidden md:flex items-center gap-2">
               <NotificationBell />
               <ThemeToggle />
-              <NavLink to="/sign-in">
-                <Button variant="outline" size="sm">
-                  Sign In
-                </Button>
-              </NavLink>
-              <NavLink to="/sign-up">
-                <Button size="sm">Sign Up</Button>
-              </NavLink>
+              {session ? (
+                <>
+                  <NavLink to="/profile">
+                    <Button variant="outline" size="sm">
+                      My Profile
+                    </Button>
+                  </NavLink>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="flex items-center gap-1"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/sign-in">
+                    <Button variant="outline" size="sm">
+                      Sign In
+                    </Button>
+                  </NavLink>
+                  <NavLink to="/sign-up">
+                    <Button size="sm">Sign Up</Button>
+                  </NavLink>
+                </>
+              )}
             </div>
             <button
               className="flex md:hidden"
@@ -153,14 +212,37 @@ const Header = () => {
               Notifications
             </NavLink>
             <div className="flex flex-col gap-2 pt-2 border-t">
-              <NavLink to="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full">
-                  Sign In
-                </Button>
-              </NavLink>
-              <NavLink to="/sign-up" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full">Sign Up</Button>
-              </NavLink>
+              {session ? (
+                <>
+                  <NavLink to="/profile" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      My Profile
+                    </Button>
+                  </NavLink>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full flex items-center justify-center gap-1"
+                    onClick={() => {
+                      handleSignOut();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      Sign In
+                    </Button>
+                  </NavLink>
+                  <NavLink to="/sign-up" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full">Sign Up</Button>
+                  </NavLink>
+                </>
+              )}
             </div>
           </div>
         </div>

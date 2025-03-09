@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -38,22 +39,24 @@ const SignIn = () => {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      // This would normally connect to your authentication service
-      console.log("Sign in data:", data);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
       
-      // Simulate a successful login
-      setTimeout(() => {
-        toast({
-          title: "Success!",
-          description: "You've successfully signed in.",
-        });
-        navigate("/profile");
-      }, 1000);
-    } catch (error) {
+      if (error) throw error;
+      
+      toast({
+        title: "Success!",
+        description: "You've successfully signed in.",
+      });
+      
+      navigate("/profile");
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Please check your credentials and try again.",
       });
     } finally {
       setIsLoading(false);

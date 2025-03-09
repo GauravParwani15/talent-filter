@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -46,22 +47,30 @@ const SignUp = () => {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      // This would normally connect to your authentication service
-      console.log("Sign up data:", data);
+      // Register user with Supabase auth
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.name,
+          },
+        },
+      });
       
-      // Simulate a successful registration
-      setTimeout(() => {
-        toast({
-          title: "Account created!",
-          description: "You've successfully created an account.",
-        });
-        navigate("/create-profile");
-      }, 1000);
-    } catch (error) {
+      if (error) throw error;
+      
+      toast({
+        title: "Account created!",
+        description: "You've successfully created an account. Please check your email for verification.",
+      });
+      
+      navigate("/create-profile");
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Sign up failed",
-        description: "There was a problem creating your account.",
+        description: error.message || "There was a problem creating your account.",
       });
     } finally {
       setIsLoading(false);
