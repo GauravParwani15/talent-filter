@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
@@ -27,8 +28,29 @@ type FormValues = z.infer<typeof formSchema>;
 
 const CreateProfile = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if the user is logged in
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        // Redirect to login if not authenticated
+        toast({
+          variant: "destructive",
+          title: "Authentication required",
+          description: "Please sign in to create a profile",
+        });
+        navigate("/sign-in");
+      } else {
+        setUserId(data.session.user.id);
+      }
+    };
+
+    checkAuth();
+  }, [navigate, toast]);
 
   const {
     register,
@@ -52,22 +74,40 @@ const CreateProfile = () => {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      // This would normally connect to your backend service
-      console.log("Profile data:", data);
-      
-      // Simulate a successful profile creation
-      setTimeout(() => {
-        toast({
-          title: "Profile created!",
-          description: "Your talent profile has been created successfully.",
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      // Insert profile into Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          title: data.title,
+          location: data.location,
+          about: data.about,
+          skills: data.skills,
+          experience: data.experience,
+          education: data.education,
+          portfolio: data.portfolio,
+          github: data.github,
+          linkedin: data.linkedin,
         });
-        navigate("/profile");
-      }, 1000);
-    } catch (error) {
+
+      if (error) throw error;
+      
+      toast({
+        title: "Profile created!",
+        description: "Your talent profile has been created successfully.",
+      });
+      
+      navigate("/profile");
+    } catch (error: any) {
+      console.error("Error creating profile:", error);
       toast({
         variant: "destructive",
         title: "Profile creation failed",
-        description: "There was a problem creating your profile.",
+        description: error.message || "There was a problem creating your profile.",
       });
     } finally {
       setIsLoading(false);

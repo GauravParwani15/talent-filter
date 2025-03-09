@@ -1,72 +1,172 @@
 
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Bookmark, ExternalLink, Mail, MapPin, MessageSquare, Star, User } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, Bookmark, ExternalLink, Mail, MapPin, MessageSquare, Star, User, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-// Mock data for a single profile
-const mockProfile = {
-  id: "1",
-  name: "Jordan Smith",
-  jobTitle: "Senior Software Engineer",
-  location: "San Francisco, CA",
-  skills: ["React", "TypeScript", "Node.js", "GraphQL", "AWS"],
-  experience: [
-    {
-      company: "Tech Solutions Inc.",
-      role: "Senior Software Engineer",
-      period: "2020 - Present",
-      description: "Led the development of a customer-facing web application using React and GraphQL."
-    },
-    {
-      company: "Digital Innovations",
-      role: "Frontend Developer",
-      period: "2018 - 2020",
-      description: "Worked on multiple projects using React, Redux, and modern JavaScript."
-    }
-  ],
-  education: [
-    {
-      institution: "University of California, Berkeley",
-      degree: "B.S. Computer Science",
-      year: "2018"
-    }
-  ],
-  languages: ["English (Native)", "Spanish (Conversational)"],
-  availability: "Available in 2 weeks",
-  bio: "Results-driven software engineer with 5+ years of experience building robust web applications. Passionate about clean code, performance optimization, and creating great user experiences."
+type ProfileData = {
+  id: string;
+  title: string;
+  location: string;
+  about: string;
+  skills: string;
+  experience: string | null;
+  education: string | null;
+  portfolio: string | null;
+  github: string | null;
+  linkedin: string | null;
 };
 
 const ProfileDetail = () => {
   const { profileId } = useParams();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   
-  // In a real app, we would fetch the profile data based on profileId
-  const profile = mockProfile;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!profileId) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Get current user
+        const { data: authData } = await supabase.auth.getSession();
+        if (authData.session) {
+          setUserId(authData.session.user.id);
+          
+          // Check if profile is bookmarked
+          const { data: savedData } = await supabase
+            .from('saved_profiles')
+            .select('*')
+            .eq('user_id', authData.session.user.id)
+            .eq('profile_id', profileId)
+            .maybeSingle();
+            
+          setIsBookmarked(!!savedData);
+        }
+        
+        // Fetch profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', profileId)
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setProfile(data);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Profile not found",
+            description: "The requested profile does not exist.",
+          });
+          navigate("/profiles");
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile. Please try again later.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProfile();
+  }, [profileId, toast, navigate]);
   
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    toast({
-      title: isBookmarked ? "Removed from bookmarks" : "Added to bookmarks",
-      description: isBookmarked 
-        ? "This profile has been removed from your bookmarks." 
-        : "This profile has been added to your bookmarks.",
-    });
+  const handleBookmark = async () => {
+    if (!userId || !profileId) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to bookmark profiles",
+      });
+      return;
+    }
+    
+    try {
+      if (isBookmarked) {
+        // Remove bookmark
+        await supabase
+          .from('saved_profiles')
+          .delete()
+          .match({ user_id: userId, profile_id: profileId });
+          
+        setIsBookmarked(false);
+        
+        toast({
+          title: "Removed from bookmarks",
+          description: "This profile has been removed from your bookmarks.",
+        });
+      } else {
+        // Add bookmark
+        await supabase
+          .from('saved_profiles')
+          .insert({ user_id: userId, profile_id: profileId });
+          
+        setIsBookmarked(true);
+        
+        toast({
+          title: "Added to bookmarks",
+          description: "This profile has been added to your bookmarks.",
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update bookmark. Please try again later.",
+      });
+    }
   };
   
   const handleContact = () => {
     toast({
       title: "Contact initiated",
-      description: `A request to contact ${profile.name} has been sent.`,
+      description: `A request to contact this talent has been sent.`,
     });
   };
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-20 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+        <span>Loading profile...</span>
+      </div>
+    );
+  }
+  
+  if (!profile) {
+    return (
+      <div className="container mx-auto py-20 text-center">
+        <User className="h-16 w-16 mx-auto text-muted-foreground" />
+        <h2 className="text-2xl font-bold mt-4">Profile not found</h2>
+        <p className="text-muted-foreground mt-2 mb-4">The requested profile does not exist or has been removed.</p>
+        <Button asChild>
+          <Link to="/profiles">Back to Profiles</Link>
+        </Button>
+      </div>
+    );
+  }
+  
+  // Parse skills into array
+  const skillsArray = profile.skills.split(',').map(skill => skill.trim());
   
   return (
     <div className="container max-w-5xl mx-auto py-8 px-4 md:px-6">
@@ -81,16 +181,14 @@ const ProfileDetail = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${profile.name}`} alt={profile.name} />
+              <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${profile.id}`} alt="Profile" />
               <AvatarFallback>
                 <User className="h-8 w-8" />
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{profile.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{profile.title}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span>{profile.jobTitle}</span>
-                <span className="text-xs">•</span>
                 <span className="flex items-center">
                   <MapPin className="h-3 w-3 mr-1" />
                   {profile.location}
@@ -116,11 +214,7 @@ const ProfileDetail = () => {
         </div>
         
         <div className="flex flex-wrap gap-2 mb-6">
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Star className="h-3 w-3" />
-            {profile.availability}
-          </Badge>
-          {profile.skills.map((skill, index) => (
+          {skillsArray.map((skill, index) => (
             <Badge key={index} variant="outline">{skill}</Badge>
           ))}
         </div>
@@ -138,32 +232,57 @@ const ProfileDetail = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                About {profile.name}
+                About
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <h3 className="font-medium mb-2">Bio</h3>
-                <p className="text-muted-foreground">{profile.bio}</p>
+                <p className="text-muted-foreground">{profile.about}</p>
               </div>
               <Separator />
               <div>
                 <h3 className="font-medium mb-2">Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.skills.map((skill, index) => (
+                  {skillsArray.map((skill, index) => (
                     <Badge key={index} variant="secondary">{skill}</Badge>
                   ))}
                 </div>
               </div>
-              <Separator />
-              <div>
-                <h3 className="font-medium mb-2">Languages</h3>
-                <ul className="list-disc pl-5 text-muted-foreground">
-                  {profile.languages.map((language, index) => (
-                    <li key={index}>{language}</li>
-                  ))}
-                </ul>
-              </div>
+              {(profile.portfolio || profile.github || profile.linkedin) && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-medium mb-2">Links</h3>
+                    <ul className="space-y-2">
+                      {profile.portfolio && (
+                        <li>
+                          <a href={profile.portfolio} target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Portfolio Website
+                          </a>
+                        </li>
+                      )}
+                      {profile.github && (
+                        <li>
+                          <a href={profile.github} target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            GitHub
+                          </a>
+                        </li>
+                      )}
+                      {profile.linkedin && (
+                        <li>
+                          <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:underline">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            LinkedIn
+                          </a>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -176,17 +295,14 @@ const ProfileDetail = () => {
                 Work Experience
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {profile.experience.map((exp, index) => (
-                <div key={index} className={index !== 0 ? "pt-6 border-t" : ""}>
-                  <div className="flex flex-col md:flex-row justify-between mb-2">
-                    <h3 className="font-semibold">{exp.role}</h3>
-                    <span className="text-muted-foreground text-sm">{exp.period}</span>
-                  </div>
-                  <h4 className="text-muted-foreground mb-2">{exp.company}</h4>
-                  <p className="text-sm">{exp.description}</p>
+            <CardContent>
+              {profile.experience ? (
+                <div className="space-y-4 whitespace-pre-line">
+                  {profile.experience}
                 </div>
-              ))}
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No experience information provided.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -199,16 +315,14 @@ const ProfileDetail = () => {
                 Education
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {profile.education.map((edu, index) => (
-                <div key={index} className={index !== 0 ? "pt-6 border-t" : ""}>
-                  <div className="flex flex-col md:flex-row justify-between mb-2">
-                    <h3 className="font-semibold">{edu.institution}</h3>
-                    <span className="text-muted-foreground text-sm">{edu.year}</span>
-                  </div>
-                  <h4 className="text-muted-foreground">{edu.degree}</h4>
+            <CardContent>
+              {profile.education ? (
+                <div className="space-y-4 whitespace-pre-line">
+                  {profile.education}
                 </div>
-              ))}
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No education information provided.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -218,12 +332,12 @@ const ProfileDetail = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Connect with {profile.name}
+            Connect
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Interested in working with {profile.name}? Reach out directly to discuss opportunities.
+            Interested in working with this talent? Reach out directly to discuss opportunities.
           </p>
         </CardContent>
         <CardFooter>
