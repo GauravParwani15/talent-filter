@@ -11,6 +11,9 @@ import RecruiterAnalytics from "./pages/RecruiterAnalytics";
 import UserProfile from "./pages/UserProfile";
 import Profiles from "./pages/Profiles";
 import ProfileDetail from "./pages/ProfileDetail";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import CreateProfile from "./pages/CreateProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +31,9 @@ const App = () => (
           <Route path="/profile" element={<MainLayout><UserProfile /></MainLayout>} />
           <Route path="/profiles" element={<MainLayout><Profiles /></MainLayout>} />
           <Route path="/profiles/:profileId" element={<MainLayout><ProfileDetail /></MainLayout>} />
+          <Route path="/sign-in" element={<MainLayout><SignIn /></MainLayout>} />
+          <Route path="/sign-up" element={<MainLayout><SignUp /></MainLayout>} />
+          <Route path="/create-profile" element={<MainLayout><CreateProfile /></MainLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
