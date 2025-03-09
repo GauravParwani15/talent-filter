@@ -9,6 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      analytics_profiles: {
+        Row: {
+          about: string
+          created_at: string
+          education: string | null
+          experience: string | null
+          github: string | null
+          id: string
+          linkedin: string | null
+          location: string
+          portfolio: string | null
+          skills: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          about: string
+          created_at?: string
+          education?: string | null
+          experience?: string | null
+          github?: string | null
+          id?: string
+          linkedin?: string | null
+          location: string
+          portfolio?: string | null
+          skills: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          about?: string
+          created_at?: string
+          education?: string | null
+          experience?: string | null
+          github?: string | null
+          id?: string
+          linkedin?: string | null
+          location?: string
+          portfolio?: string | null
+          skills?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      analytics_saved_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_saved_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           about: string
