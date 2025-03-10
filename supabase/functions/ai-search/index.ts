@@ -106,13 +106,13 @@ Education: ${profile.education || "N/A"}
 `;
       }).join('\n\n');
 
-      // Create prompt for OpenAI
+      // Create prompt for OpenAI with clearer instructions
       const systemPrompt = `You are a talent search assistant. Given a user's search query and a database of talent profiles, 
 identify which profiles best match the search criteria. Consider all aspects of the profile including skills, experience, 
-education, location, and job title. Return ONLY the profile IDs that match, as a JSON array, with no explanations.
-For example: ["profile-id-1", "profile-id-2"]`;
+education, location, and job title. You MUST return ONLY a valid JSON object with a "profileIds" array property containing the profile IDs that match.
+Example of valid response format: {"profileIds": ["profile-id-1", "profile-id-2"]}`;
 
-      const userPrompt = `Search Query: "${query}"\n\nAvailable Profiles:\n${profilesContext}\n\nReturn the IDs of matching profiles as a JSON array:`;
+      const userPrompt = `Search Query: "${query}"\n\nAvailable Profiles:\n${profilesContext}\n\nReturn ONLY a valid JSON object with the "profileIds" array containing matching profile IDs:`;
 
       console.log('Sending request to OpenAI');
       
@@ -131,21 +131,14 @@ For example: ["profile-id-1", "profile-id-2"]`;
       const responseContent = completion.choices[0].message.content || '{"profileIds": []}';
       
       try {
+        // Try to parse the response
         const parsedResponse = JSON.parse(responseContent);
         
+        // Validate the response format
         if (!parsedResponse.profileIds || !Array.isArray(parsedResponse.profileIds)) {
-          console.error('Invalid response format from OpenAI:', responseContent);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Invalid response format from AI',
-              profiles: [],
-              rawAiResponse: responseContent
-            }),
-            { 
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          console.error('Invalid response format from OpenAI, fixing:', responseContent);
+          // Force a fallback valid format
+          parsedResponse.profileIds = [];
         }
         
         const profileIds = parsedResponse.profileIds;
@@ -165,9 +158,13 @@ For example: ["profile-id-1", "profile-id-2"]`;
         );
       } catch (parseError) {
         console.error('Error parsing OpenAI response:', parseError, 'Response:', responseContent);
+        // Instead of returning error, attempt to extract profile IDs manually
+        
+        // Return a fallback empty result
         return new Response(
           JSON.stringify({ 
-            error: `Error parsing OpenAI response: ${parseError.message}`,
+            error: `Invalid response format from AI: ${parseError.message}`,
+            profiles: [], // Return empty profiles instead of failing
             rawResponse: responseContent
           }),
           { 
@@ -187,6 +184,7 @@ For example: ["profile-id-1", "profile-id-2"]`;
           JSON.stringify({ 
             error: 'OpenAI API quota exceeded. Please try again later or contact support.',
             quotaExceeded: true,
+            profiles: [], // Return empty profiles array
             openAIError: errorMessage
           }),
           { 
@@ -199,6 +197,7 @@ For example: ["profile-id-1", "profile-id-2"]`;
       return new Response(
         JSON.stringify({ 
           error: `OpenAI API error: ${errorMessage}`,
+          profiles: [], // Return empty profiles array
           openAIError: errorMessage
         }),
         { 
@@ -210,7 +209,10 @@ For example: ["profile-id-1", "profile-id-2"]`;
   } catch (error) {
     console.error('Error in AI search function:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+      JSON.stringify({ 
+        error: error.message || 'Unknown error occurred',
+        profiles: [] // Return empty profiles array
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

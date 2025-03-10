@@ -20,6 +20,8 @@ export const useAISearch = () => {
     setHasSearched(true);
 
     try {
+      console.log('Sending query to AI search function:', query);
+      
       const { data, error } = await supabase.functions.invoke('ai-search', {
         body: { query },
       });
@@ -32,8 +34,11 @@ export const useAISearch = () => {
           description: "Failed to perform AI search. Please try again later.",
         });
         setSearchResults([]);
+        setIsSearching(false);
         return;
       }
+
+      console.log('AI search response:', data);
 
       // Handle errors returned with 200 status code
       if (data?.error) {
@@ -55,12 +60,11 @@ export const useAISearch = () => {
         }
         
         setSearchResults([]);
+        setIsSearching(false);
         return;
       }
 
-      console.log('AI search results:', data);
-
-      // Update the search results
+      // Ensure we always have a profiles array even if it's empty
       const profiles = data?.profiles || [];
       setSearchResults(profiles);
 
