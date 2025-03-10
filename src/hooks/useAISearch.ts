@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Profile } from "@/hooks/useProfiles";
 
 export const useAISearch = () => {
@@ -35,6 +35,7 @@ export const useAISearch = () => {
         return;
       }
 
+      // Handle errors returned with 200 status code
       if (data.error) {
         console.error('Error from AI search function:', data.error);
         toast({
@@ -49,9 +50,10 @@ export const useAISearch = () => {
       console.log('AI search results:', data);
 
       // Update the search results
-      setSearchResults(data.profiles || []);
+      const profiles = data.profiles || [];
+      setSearchResults(profiles);
 
-      if ((data.profiles || []).length === 0) {
+      if (profiles.length === 0) {
         toast({
           title: "No Results",
           description: "No profiles match your search criteria.",

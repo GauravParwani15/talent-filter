@@ -18,14 +18,21 @@ serve(async (req) => {
     const { query } = await req.json();
     
     if (!query) {
-      throw new Error('Search query is required');
+      return new Response(
+        JSON.stringify({ error: 'Search query is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Processing search query:', query);
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://ozzhdydwihmtfdkpaski.supabase.co';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || req.headers.get('Authorization')?.split('Bearer ')[1] || '';
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials');
+    }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
@@ -36,6 +43,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
       
     if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
       throw new Error(`Error fetching profiles: ${profilesError.message}`);
     }
     
@@ -46,6 +54,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
       
     if (analyticsError) {
+      console.error('Error fetching analytics profiles:', analyticsError);
       throw new Error(`Error fetching analytics profiles: ${analyticsError.message}`);
     }
     
@@ -60,17 +69,22 @@ serve(async (req) => {
     }
 
     // Initialize OpenAI
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || '';
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key is missing');
+    }
+    
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY') || '',
+      apiKey: openaiApiKey,
     });
 
     // Create a context with profile information
     const profilesContext = allProfilesData.map((profile, index) => {
       return `Profile ${index + 1}:
 ID: ${profile.id}
-Title: ${profile.title}
-Location: ${profile.location}
-Skills: ${profile.skills}
+Title: ${profile.title || 'N/A'}
+Location: ${profile.location || 'N/A'}
+Skills: ${profile.skills || 'N/A'}
 About: ${profile.about || "N/A"}
 Experience: ${profile.experience || "N/A"}
 Education: ${profile.education || "N/A"}
@@ -102,13 +116,24 @@ For example: ["profile-id-1", "profile-id-2"]`;
     const responseContent = completion.choices[0].message.content || '{"profileIds": []}';
     
     try {
-      const { profileIds } = JSON.parse(responseContent);
+      const parsedResponse = JSON.parse(responseContent);
       
-      if (!Array.isArray(profileIds)) {
+      if (!parsedResponse.profileIds || !Array.isArray(parsedResponse.profileIds)) {
         console.error('Invalid response format from OpenAI:', responseContent);
-        throw new Error('Invalid response format from OpenAI');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid response format from AI',
+            profiles: [],
+            rawAiResponse: responseContent
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
       
+      const profileIds = parsedResponse.profileIds;
       console.log('Matched profile IDs:', profileIds);
       
       // Find the full profile objects for the matched IDs
@@ -125,14 +150,23 @@ For example: ["profile-id-1", "profile-id-2"]`;
       );
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError, 'Response:', responseContent);
-      throw new Error(`Error parsing OpenAI response: ${parseError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Error parsing OpenAI response: ${parseError.message}`,
+          rawResponse: responseContent
+        }),
+        { 
+          status: 200, // Using 200 to avoid the generic error handling
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
   } catch (error) {
     console.error('Error in AI search function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       {
-        status: 400,
+        status: 200, // Using 200 to avoid the generic error message
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     );
