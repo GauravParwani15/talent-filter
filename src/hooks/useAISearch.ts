@@ -65,7 +65,7 @@ export const useAISearch = () => {
       }
 
       // Ensure we always have a profiles array even if it's empty
-      const profiles = data?.profiles || [];
+      const profiles = Array.isArray(data?.profiles) ? data.profiles : [];
       setSearchResults(profiles);
 
       if (profiles.length === 0) {

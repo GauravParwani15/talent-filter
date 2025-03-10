@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Bookmark, ExternalLink, Mail, MapPin, MessageSquare, Star, User, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import EmptyState from "@/components/profile/EmptyState";
 
 type ProfileData = {
   id: string;
@@ -31,14 +32,20 @@ const ProfileDetail = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!profileId) return;
+      if (!profileId) {
+        setError("Missing profile ID");
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
+        setError(null);
         
         // Get current user
         const { data: authData } = await supabase.auth.getSession();
@@ -56,27 +63,40 @@ const ProfileDetail = () => {
           setIsBookmarked(!!savedData);
         }
         
-        // Fetch profile
-        const { data, error } = await supabase
+        // First try to fetch from regular profiles
+        let { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', profileId)
           .maybeSingle();
           
-        if (error) throw error;
+        // If not found in regular profiles, try analytics_profiles
+        if (!profileData && !profileError) {
+          const { data: analyticsData, error: analyticsError } = await supabase
+            .from('analytics_profiles')
+            .select('*')
+            .eq('id', profileId)
+            .maybeSingle();
+            
+          if (analyticsError) throw analyticsError;
+          profileData = analyticsData;
+        }
         
-        if (data) {
-          setProfile(data);
+        if (profileError) throw profileError;
+        
+        if (profileData) {
+          setProfile(profileData);
         } else {
+          setError("Profile not found");
           toast({
             variant: "destructive",
             title: "Profile not found",
-            description: "The requested profile does not exist.",
+            description: "The requested profile does not exist or has been removed.",
           });
-          navigate("/profiles");
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
+        setError("Failed to load profile");
         toast({
           variant: "destructive",
           title: "Error",
@@ -152,15 +172,21 @@ const ProfileDetail = () => {
     );
   }
   
-  if (!profile) {
+  if (error || !profile) {
     return (
-      <div className="container mx-auto py-20 text-center">
-        <User className="h-16 w-16 mx-auto text-muted-foreground" />
-        <h2 className="text-2xl font-bold mt-4">Profile not found</h2>
-        <p className="text-muted-foreground mt-2 mb-4">The requested profile does not exist or has been removed.</p>
-        <Button asChild>
-          <Link to="/profiles">Back to Profiles</Link>
+      <div className="container mx-auto py-8">
+        <Button variant="ghost" asChild className="mb-4">
+          <Link to="/profiles" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Profiles
+          </Link>
         </Button>
+        
+        <EmptyState
+          title="Profile not found"
+          description="The requested profile does not exist or has been removed."
+          showBackButton={true}
+        />
       </div>
     );
   }
