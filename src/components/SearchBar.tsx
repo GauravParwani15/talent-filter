@@ -1,16 +1,27 @@
 
-import { useState } from "react";
-import { Search, X, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, X, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
   initialQuery?: string;
   isLoading?: boolean;
+  isAIEnabled?: boolean;
 }
 
-const SearchBar = ({ onSearch, initialQuery = "", isLoading = false }: SearchBarProps) => {
+const SearchBar = ({ 
+  onSearch, 
+  initialQuery = "", 
+  isLoading = false,
+  isAIEnabled = true
+}: SearchBarProps) => {
   const [query, setQuery] = useState(initialQuery);
+  
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
   
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -63,17 +74,31 @@ const SearchBar = ({ onSearch, initialQuery = "", isLoading = false }: SearchBar
           )}
         </div>
         
-        <Button 
-          type="submit" 
-          disabled={!query.trim() || isLoading}
-          className="absolute right-0 top-0 bottom-0 px-4 rounded-l-none rounded-r-xl"
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <span>Search</span>
-          )}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                type="submit" 
+                disabled={!query.trim() || isLoading}
+                className="absolute right-0 top-0 bottom-0 px-4 rounded-l-none rounded-r-xl"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    {isAIEnabled && <Sparkles className="h-4 w-4 mr-1.5" />}
+                    <span>Search</span>
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            {isAIEnabled && (
+              <TooltipContent>
+                <p>AI-powered search</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </form>
       
       <div className="flex flex-wrap gap-2 mt-3">

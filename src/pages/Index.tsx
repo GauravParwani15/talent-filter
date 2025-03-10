@@ -1,20 +1,27 @@
 
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import SearchBar from "@/components/SearchBar";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
   
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    navigate(`/profiles?search=${encodeURIComponent(query)}`);
+    setIsSearching(true);
+    
+    // Add a small delay to show the loading state
+    setTimeout(() => {
+      navigate(`/profiles?search=${encodeURIComponent(query)}&mode=ai`);
+      setIsSearching(false);
+    }, 800);
   };
   
   return (
@@ -32,7 +39,7 @@ const Index = () => {
               </p>
             </div>
             
-            <SearchBar onSearch={handleSearch} />
+            <SearchBar onSearch={handleSearch} isLoading={isSearching} isAIEnabled={true} />
           </div>
         </section>
         
