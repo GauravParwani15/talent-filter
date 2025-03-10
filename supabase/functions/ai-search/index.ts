@@ -20,7 +20,7 @@ serve(async (req) => {
     if (!query) {
       return new Response(
         JSON.stringify({ error: 'Search query is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -31,7 +31,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || req.headers.get('Authorization')?.split('Bearer ')[1] || '';
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase credentials');
+      console.error('Missing Supabase credentials');
+      return new Response(
+        JSON.stringify({ error: 'Missing Supabase credentials' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -44,7 +48,10 @@ serve(async (req) => {
       
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
-      throw new Error(`Error fetching profiles: ${profilesError.message}`);
+      return new Response(
+        JSON.stringify({ error: `Error fetching profiles: ${profilesError.message}` }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     // Also fetch analytics profiles
@@ -55,7 +62,10 @@ serve(async (req) => {
       
     if (analyticsError) {
       console.error('Error fetching analytics profiles:', analyticsError);
-      throw new Error(`Error fetching analytics profiles: ${analyticsError.message}`);
+      return new Response(
+        JSON.stringify({ error: `Error fetching analytics profiles: ${analyticsError.message}` }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     // Combine profiles
@@ -71,16 +81,21 @@ serve(async (req) => {
     // Initialize OpenAI
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || '';
     if (!openaiApiKey) {
-      throw new Error('OpenAI API key is missing');
+      console.error('OpenAI API key is missing');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is missing' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    const openai = new OpenAI({
-      apiKey: openaiApiKey,
-    });
+    try {
+      const openai = new OpenAI({
+        apiKey: openaiApiKey,
+      });
 
-    // Create a context with profile information
-    const profilesContext = allProfilesData.map((profile, index) => {
-      return `Profile ${index + 1}:
+      // Create a context with profile information
+      const profilesContext = allProfilesData.map((profile, index) => {
+        return `Profile ${index + 1}:
 ID: ${profile.id}
 Title: ${profile.title || 'N/A'}
 Location: ${profile.location || 'N/A'}
@@ -89,74 +104,105 @@ About: ${profile.about || "N/A"}
 Experience: ${profile.experience || "N/A"}
 Education: ${profile.education || "N/A"}
 `;
-    }).join('\n\n');
+      }).join('\n\n');
 
-    // Create prompt for OpenAI
-    const systemPrompt = `You are a talent search assistant. Given a user's search query and a database of talent profiles, 
+      // Create prompt for OpenAI
+      const systemPrompt = `You are a talent search assistant. Given a user's search query and a database of talent profiles, 
 identify which profiles best match the search criteria. Consider all aspects of the profile including skills, experience, 
 education, location, and job title. Return ONLY the profile IDs that match, as a JSON array, with no explanations.
 For example: ["profile-id-1", "profile-id-2"]`;
 
-    const userPrompt = `Search Query: "${query}"\n\nAvailable Profiles:\n${profilesContext}\n\nReturn the IDs of matching profiles as a JSON array:`;
+      const userPrompt = `Search Query: "${query}"\n\nAvailable Profiles:\n${profilesContext}\n\nReturn the IDs of matching profiles as a JSON array:`;
 
-    console.log('Sending request to OpenAI');
-    
-    // Use OpenAI to process the query
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.2,
-      response_format: { type: "json_object" }
-    });
-
-    // Extract the matching profile IDs from the response
-    const responseContent = completion.choices[0].message.content || '{"profileIds": []}';
-    
-    try {
-      const parsedResponse = JSON.parse(responseContent);
+      console.log('Sending request to OpenAI');
       
-      if (!parsedResponse.profileIds || !Array.isArray(parsedResponse.profileIds)) {
-        console.error('Invalid response format from OpenAI:', responseContent);
+      // Use OpenAI to process the query
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      });
+
+      // Extract the matching profile IDs from the response
+      const responseContent = completion.choices[0].message.content || '{"profileIds": []}';
+      
+      try {
+        const parsedResponse = JSON.parse(responseContent);
+        
+        if (!parsedResponse.profileIds || !Array.isArray(parsedResponse.profileIds)) {
+          console.error('Invalid response format from OpenAI:', responseContent);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Invalid response format from AI',
+              profiles: [],
+              rawAiResponse: responseContent
+            }),
+            { 
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        const profileIds = parsedResponse.profileIds;
+        console.log('Matched profile IDs:', profileIds);
+        
+        // Find the full profile objects for the matched IDs
+        const matchedProfiles = allProfilesData.filter(profile => 
+          profileIds.includes(profile.id)
+        );
+        
         return new Response(
           JSON.stringify({ 
-            error: 'Invalid response format from AI',
-            profiles: [],
-            rawAiResponse: responseContent
+            profiles: matchedProfiles,
+            rawAiResponse: responseContent,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      } catch (parseError) {
+        console.error('Error parsing OpenAI response:', parseError, 'Response:', responseContent);
+        return new Response(
+          JSON.stringify({ 
+            error: `Error parsing OpenAI response: ${parseError.message}`,
+            rawResponse: responseContent
           }),
           { 
-            status: 200,
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    } catch (openAIError) {
+      // Handle OpenAI-specific errors
+      console.error('OpenAI API error:', openAIError);
+      
+      // Check if it's a quota exceeded error
+      const errorMessage = openAIError.message || '';
+      if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'OpenAI API quota exceeded. Please try again later or contact support.',
+            quotaExceeded: true,
+            openAIError: errorMessage
+          }),
+          { 
+            status: 200, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         );
       }
       
-      const profileIds = parsedResponse.profileIds;
-      console.log('Matched profile IDs:', profileIds);
-      
-      // Find the full profile objects for the matched IDs
-      const matchedProfiles = allProfilesData.filter(profile => 
-        profileIds.includes(profile.id)
-      );
-      
       return new Response(
         JSON.stringify({ 
-          profiles: matchedProfiles,
-          rawAiResponse: responseContent,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError, 'Response:', responseContent);
-      return new Response(
-        JSON.stringify({ 
-          error: `Error parsing OpenAI response: ${parseError.message}`,
-          rawResponse: responseContent
+          error: `OpenAI API error: ${errorMessage}`,
+          openAIError: errorMessage
         }),
         { 
-          status: 200, // Using 200 to avoid the generic error handling
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -166,7 +212,7 @@ For example: ["profile-id-1", "profile-id-2"]`;
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       {
-        status: 200, // Using 200 to avoid the generic error message
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     );

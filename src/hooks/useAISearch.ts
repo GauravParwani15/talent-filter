@@ -36,13 +36,24 @@ export const useAISearch = () => {
       }
 
       // Handle errors returned with 200 status code
-      if (data.error) {
+      if (data?.error) {
         console.error('Error from AI search function:', data.error);
-        toast({
-          variant: "destructive",
-          title: "Search Error",
-          description: data.error || "An error occurred during search.",
-        });
+        
+        // Special handling for quota exceeded errors
+        if (data.quotaExceeded) {
+          toast({
+            variant: "destructive",
+            title: "API Quota Exceeded",
+            description: "The AI search service is currently unavailable due to API quota limits. Please try again later.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Search Error",
+            description: data.error || "An error occurred during search.",
+          });
+        }
+        
         setSearchResults([]);
         return;
       }
@@ -50,7 +61,7 @@ export const useAISearch = () => {
       console.log('AI search results:', data);
 
       // Update the search results
-      const profiles = data.profiles || [];
+      const profiles = data?.profiles || [];
       setSearchResults(profiles);
 
       if (profiles.length === 0) {
