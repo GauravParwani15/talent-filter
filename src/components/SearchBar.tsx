@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, X, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,10 +18,47 @@ const SearchBar = ({
   isAIEnabled = true
 }: SearchBarProps) => {
   const [query, setQuery] = useState(initialQuery);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState("");
+  const placeholderIntervalRef = useRef<number | null>(null);
+  
+  const placeholderSuggestions = [
+    "Full-stack developer with React experience",
+    "DevOps engineer familiar with AWS",
+    "Mobile developer with 3+ years of experience",
+    "UI/UX designer who can code"
+  ];
   
   useEffect(() => {
     setQuery(initialQuery);
   }, [initialQuery]);
+  
+  // Set up rotating placeholder suggestions
+  useEffect(() => {
+    // Set initial placeholder
+    const randomIndex = Math.floor(Math.random() * placeholderSuggestions.length);
+    setCurrentPlaceholder(placeholderSuggestions[randomIndex]);
+    
+    // Change placeholder every 3-4 seconds
+    const getRandomInterval = () => Math.floor(Math.random() * 1000) + 3000; // 3-4 seconds
+    
+    const rotatePlaceholder = () => {
+      const newIndex = Math.floor(Math.random() * placeholderSuggestions.length);
+      setCurrentPlaceholder(placeholderSuggestions[newIndex]);
+      
+      // Set next interval with random timing
+      placeholderIntervalRef.current = window.setTimeout(rotatePlaceholder, getRandomInterval());
+    };
+    
+    // Start the rotation
+    placeholderIntervalRef.current = window.setTimeout(rotatePlaceholder, getRandomInterval());
+    
+    // Clean up on unmount
+    return () => {
+      if (placeholderIntervalRef.current) {
+        clearTimeout(placeholderIntervalRef.current);
+      }
+    };
+  }, []);
   
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,15 +70,6 @@ const SearchBar = ({
   const clearSearch = () => {
     setQuery("");
   };
-  
-  const placeholderSuggestions = [
-    "Full-stack developer with React experience",
-    "DevOps engineer familiar with AWS",
-    "Mobile developer with 3+ years of experience",
-    "UI/UX designer who can code"
-  ];
-  
-  const randomPlaceholder = placeholderSuggestions[Math.floor(Math.random() * placeholderSuggestions.length)];
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -55,7 +83,7 @@ const SearchBar = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Try: "${randomPlaceholder}"`}
+            placeholder={`Try: "${currentPlaceholder}"`}
             className="block w-full py-3 pl-12 pr-20 text-base rounded-xl border border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             disabled={isLoading}
           />
